@@ -1,0 +1,183 @@
+Socket:
+A socket is a combination of an IP Address and a Port number.
+
+Socket File Descripter(Socket_Fd):
+Each socket within the network has a unique name or unique number associated with it called a socket descriptor.
+
+
+Server side operations
+
+    1. Creating a socket and getting it's file descripter using socket function.
+        socket_fd = socket(domain, type, protocol);
+        here,
+        sockfd -> socket descriptor, an integer.
+        domain -> IP domain e.g., for IPV4 -> AF_INET (IPv4 protocol) , and for IPV6 -> AF_INET6 (IPv6 protocol)
+        type   -> Communication type either TCP or UDP,
+            SOCK_STREAM: Transmission Control Protocol("TCP" reliable, connection oriented which means connection is necessary for communication e.g downloading)
+            SOCK_DGRAM: User Datagram Protocol("UDP" unreliable, connectionless which means no connection is necessary for communication e.g sending sms does not require connections between sender and receiver) 
+        Protocol -> a protocol can be an internet protocol (IP) or any other protocol like man,can etc for internet protocol we use '0'.
+
+
+    2. Binding and Listening (A process in which server tells that I listen on given 'X' IP with given 'Y' port number)
+           Still after getting file descripter from socket function, socket is not yet created completely and uptill now,
+           we have only defined the properties of our socket that is, it will be having an IP version 4, with an InterNet (IN)domain
+           and having TCP or UDP as transmission protocol. Now we will be assigning IP and a port to our socket and for that, we have 
+           a structure in C called Sockaddr. Sockaddr is a generic struct to represent all type of network domains InterNet(IN),MAN etc
+           but since we are currently working with InterNet domain, we will be using struct of sockaddr_in which is specific to InterNet
+           domain. The difference between sockaddr struct and sockaddr_in struct can be seen below,
+
+                struct sockaddr {
+                    __uint8_t       sa_len;         /* total length */
+                    sa_family_t     sa_family;      /* [XSI] address family */
+                    char            sa_data[14];    /* [XSI] addr value (actually larger) */
+                };
+
+                struct sockaddr_in {
+                    __uint8_t       sin_len;
+                    sa_family_t     sin_family;
+                    in_port_t       sin_port;
+                    struct  in_addr sin_addr;
+                    char            sin_zero[8]; // they are not used and are just added so that sockaddr_in and sockaddr structure objects 
+                                                    can have same sizes and can be casted easily. These zero_bytes are added just for casting 
+                                                    purpose because all the functions will be using sockaddr and we will have to do typecasting 
+                                                    while using those functions.
+                };
+
+            Here,
+            sin_family -> represents the address family that is used to designate the type of addresses that your socket can communicate.
+                          if it is AF_INET then it means IPV4 and if it is AF_INET6 then it means IPV6. We also have other families also
+                          like AF_UNIX, PF_INET, AF_PACKET, AF_UNSPEC etc  but for now focus on these two.
+            sin_port   -> it contains the port number.
+            sin_addr   -> it contains the IP address.
+                          sin_addr is a union/struct type called "in_addr". sin_addr further has some properties.it can be accessed in three 
+                          different ways : as s_un_b (four 1-byte integers), s_un_w (two 2-bytes integers) or as s_addr (one 4-bytes integer).
+                          example,
+                            sin_addr.s_addr ( for 4-bytes of address representation.)
+                            sin_addr.s_un_w ( for 2-bytes of unsigned address representation.)
+                            sin_addr.s_un_b ( for 1-bytes of unsigned address representation. An address can be an integer too it does not mean an address 
+                                              is alway an IP address but for InterNet domain the address is IP address)
+
+            The sin_addr contains the IP address in structure format and in order to convert it into dotted IP string format, we call inet_ntoa(object_name.sin_addr) function.
+            Similarly, in order to convert from dotted ip address to numeric address we call inet_aton(object_name.sin_addr) which is opposite of inet_ntoa function. It converts
+            string IP address to struct type of sin_addr because sin_addr is also a struct type.
+
+    Big Endian Address Representation --> 01 23 45 67
+    Little Endian Address Representation --> 67 45 23 01
+    Host Byte Order --> Intel Big Endian Representation of Address
+    Network Byte Order --> Simple Big Endian Representation of Address
+
+    The htonl(host to network long) function takes a 32-bit number in host byte order and returns a 32-bit number in the 
+    network byte order used in TCP/IP networks (the AF_INET or AF_INET6 address family). The htonl function can be used 
+    to convert an IPv4 address in host byte order to the IPv4 address in network byte order.
+
+    The htons(host to network short) function takes a 16-bit number in host byte order and returns a 16-bit number in 
+    network byte order used in TCP/IP networks (the AF_INET or AF_INET6 address family). The htons function can be used 
+    to convert an IP port number in host byte order to the IP port number in network byte order.
+
+    Note: while assigning port number to "_name_of_struct_.sin_port" we must call host to network short "htnos" to convert 
+    it in big endian short. Similarly, while assigning "_name of struct_.sin_addr.s_addr" we should convert the IP address 
+    to host to network long "htonl"
+
+    We first create an struct variable of "sockaddr_in" and set all it's properties and pass it to the bind function so
+    that bind function can finally create the socket and it makes the server ready to listen. When listen function is invoked,
+    the server uses this socket(whose file descripter is provided to the lsiten function as it's first argument) and start 
+    listening according the configured socket settings. The listen function takes 2 arguments,
+    listen(filedescripter of the configured socket, length of the client connections queue);
+    The length of the client connection queue means that 'n' given connections can be made using this socket it does not mean
+    that the socket can handle 5 connections at the same time in parallel but it means that the socket can handle 5 connections
+    one connection at a time and total of 5 connections. If there already exist a conenction then the rest of the connection 
+    should wait in the queue for their turn. This is called "blocking".
+
+    The bind function take 3 arguments,
+    bind( socket_file_descripter, sockaddr_struct_object_that is generic_for_all_domains, sizeof_struct_object);
+    
+    Note: if we are using sockaddr_in then we will have to typecast it to generic sockaddr struct type to pass it 
+    as second argument.
+
+    The bind function returns a negative value "-1" if binding fails.
+
+    Once the binding is done successfully, we call the listen function that takes two arguments,
+    listen(file_descripter, size_of_connection_waiting_queue/backlog)
+
+    
+
+    3. setsockopt function call
+            Once the server starts listening, we call setsockopt because it helps in manipulating 
+            options for the socket referred by the file descriptor sockfd. This is completely optional, 
+            but it helps in reuse of address and port for multiple requests on same address. It prevents 
+            error such as: “address already in use”.
+
+
+    4. Create a sockaddr_in struct object for client(make for server if writing code for client) to pass it in 
+        accept function after type ccasting to sockaddr to recieve client connection request or an struct object 
+        of type sockaddr_in from client process. We dont have to initialize it because this will get initialized 
+        from client process as the client process will be sending a client sockaddr object after type casting of 
+        sockaddr_in to the server process.
+        example,
+            struct sockaddr_in Client_Address;
+
+
+    5. Wait for client to send a request for connection in an infinite while loop. 
+        We call accept function in an infinite while loop to wait for client to send a connection request.
+        if accept function returns a negative value then it means connection with client was broken while 
+        connecting it with server and we can call exit(-1) if this condition gets true.
+        The acceept function takes following arguments,
+        int Client_File_Descripter = accept(Socket_file_descripter, sockaddr_struct_type_object, sockaddr_object_struct_length)
+        The accept function returns the client file descripter which will be used for sending and receiving data to client.
+
+    
+    6. Another infinite while loop to recieve 'N' messages from client.
+            Each iteration of this while loop will be receiving a message from client side and printing it.
+            Inside this while loop we call use following functions for communication between client and server,
+                For SOCK_STREAM(TCP) 
+                    1. read/recv(file_descripter,buffer_starting_address, buffer_size)
+                           The recv function returns length of total data received by the server from client.
+                           and puts the recieved data in the passed recieved buffer. If recieve length is 0
+                           that means client isn ot sending data/responding so we can close connection at this 
+                           point if we want but it does not mean that client don't want to communicate later.
+
+                    2. write(file_descripter,buffer_starting_address, buffer_size)
+                            The write function returns negative value "-1" if sending fails.
+
+                For SOCK_DGRAM(UDP)
+                    1. recvfrom( some arguments )
+                    2. sendto( some arguments )
+
+
+Same steps will be followed for writing code for client but from step # 4 to step # 6
+Following function will help while writing code for client,
+
+server_IP = gethostbyname(hostname) // resolves the hostname into IP address.
+example,
+
+server_IP = gethostbyname('localhost')
+if gethostbyname returns null then it means it can't resolve hostname otherwise it will
+return an object of struct hostent type that is defined as,
+    struct hostent {
+        char *h_name; // example "localhost", "google.com"
+        char **h_aliases;
+        short h_addrtype;
+        short h_length; // length of IP Address
+        char **h_addr_list; // list of addresses
+        #define h_addr h_addr_list[0] 
+        // assigning the 0th address as the main address h_addr
+        this h_addr contains the IP address for example --> 127.0.0.1
+    };
+
+    typedef struct hostent HOSTENT; 
+
+
+bzero(any struct type object, size of struct type object) // initializes the struct object with 0s
+
+
+
+In order to make server to listen to multiple clients at the same time, write step # 6 inside this 
+if check after accepting connection of a client,
+    if( fork() == 0 ){
+        step # 6
+    }
+    // This fork call will make a child process and will execute the remaining code in a child process in parallel.
+    this fork will return return 0 inside child process scope and will return the child process id in parent scope so,
+    in parent scope this check will become false and parent will now listen to next client and wait for it to send request
+    for conenction and will allocate a separate child process to it as well. This approach is not good because if parent 
+    process somehow get terminated the child processes become zombie processes.
