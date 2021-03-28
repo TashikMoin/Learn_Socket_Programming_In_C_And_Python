@@ -12,10 +12,12 @@ Server side operations
         here,
         sockfd -> socket descriptor, an integer.
         domain -> IP domain e.g., for IPV4 -> AF_INET (IPv4 protocol) , and for IPV6 -> AF_INET6 (IPv6 protocol)
+                  we have more domains but for now these are enough.
         type   -> Communication type either TCP or UDP,
             SOCK_STREAM: Transmission Control Protocol("TCP" reliable, connection oriented which means connection is necessary for communication e.g downloading)
             SOCK_DGRAM: User Datagram Protocol("UDP" unreliable, connectionless which means no connection is necessary for communication e.g sending sms does not require connections between sender and receiver) 
         Protocol -> a protocol can be an internet protocol (IP) or any other protocol like man,can etc for internet protocol we use '0'.
+
 
 
     2. Binding and Listening (A process in which server tells that I listen on given 'X' IP with given 'Y' port number)
@@ -56,6 +58,15 @@ Server side operations
                             sin_addr.s_un_w ( for 2-bytes of unsigned address representation.)
                             sin_addr.s_un_b ( for 1-bytes of unsigned address representation. An address can be an integer too it does not mean an address 
                                               is alway an IP address but for InterNet domain the address is IP address)
+
+            Before calling bind function make sure you intialize the above 3 properties of sockaddr_in structure object for server.
+            while assinging port make sure you assign the port by converting it into non intel Big Endian format by calling htons(port)
+            function simialrly also assign ip to sin_addr.s_addr in big endian format using htonl(ip). Most of the time we use
+            "INADDR_ANY" which means the IP "0.0.0.0". This IP allows to listen or run application/server on every IP of our local machine.
+            for e.g , the advantage of using "INADDR_ANY" will allow us to listen server request on localhost, 127.0.0.1, machine IPV4(192.168._._)
+            etc. The server will be listening on all these addresses if we use "INADDR_ANY" but if we specifically use any 
+            IP address and assign that IP address to sin_addr.s_addr property then the server will only run on that specific 
+            IP address and not on all.
 
             The sin_addr contains the IP address in structure format and in order to convert it into dotted IP string format, we call inet_ntoa(object_name.sin_addr) function.
             Similarly, in order to convert from dotted ip address to numeric address we call inet_aton(object_name.sin_addr) which is opposite of inet_ntoa function. It converts
