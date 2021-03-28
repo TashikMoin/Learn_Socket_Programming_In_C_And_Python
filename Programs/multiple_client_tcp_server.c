@@ -75,12 +75,8 @@ int main(int argc, char const *argv[])
                     break;
                 }
                 printf("\nServer recieved message from client %d --> %s",getpid(),Buffer);
-                int id = getpid();
-                char Current_Process_Id[10]; 
-                sprintf(Current_Process_Id, "%d", id);
-                char Server_Message[50] = "Server message to client # ";
-                strcat(Server_Message,Current_Process_Id);
-                strcpy(Buffer,Server_Message );
+                printf("\nWrite a message for client # %d :", getpid());
+                fgets(Buffer,1024,stdin);
                 int Sending_Status = send(Client_File_Descripter, &Buffer, sizeof(Buffer), 0);
                 if( Sending_Status < 0 )
                 {
